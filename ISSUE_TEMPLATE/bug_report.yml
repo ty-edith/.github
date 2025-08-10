@@ -1,0 +1,21 @@
+name: Bug report
+description: Report a problem
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide steps, expected vs. actual.
+  - type: input
+    id: repo
+    attributes:
+      label: Repository
+      description: Which repo is affected?
