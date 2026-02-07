@@ -1,0 +1,54 @@
+name: Deploy to Homelab
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: 'Service name'
+        required: true
+        type: string
+      tag:
+        description: 'Image tag to deploy'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, homelab]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create namespace if needed
+        run: |
+          kubectl create namespace verkligt --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ${{ inputs.service }} \
+            ./${{ inputs.service }}/chart \
+            --namespace verkligt \
+            --values ./${{ inputs.service }}/chart/values.yaml \
+            --values ./${{ inputs.service }}/chart/values-homelab.yaml \
+            --set image.tag=${{ inputs.tag }} \
+            --wait \
+            --timeout 120s
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ inputs.service }} \
+            -n verkligt \
+            --timeout=120s
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** verkligt" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pods" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n verkligt -l app=${{ inputs.service }} >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
